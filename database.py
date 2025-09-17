@@ -22,10 +22,34 @@ class DatabaseManager:
             )
             self.cursor = self.connection.cursor(cursor_factory=RealDictCursor)
             logger.info("Database connected successfully")
+            
+            # Create images table if it doesn't exist
+            self.create_images_table()
+            
             return True
         except Exception as e:
             logger.error(f"Database connection failed: {e}")
             return False
+    
+    def create_images_table(self):
+        """Create images table if it doesn't exist"""
+        try:
+            create_table_query = """
+                CREATE TABLE IF NOT EXISTS images (
+                    id SERIAL PRIMARY KEY,
+                    filename TEXT NOT NULL,
+                    description TEXT,
+                    location TEXT,
+                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    path TEXT
+                );
+            """
+            self.cursor.execute(create_table_query)
+            self.connection.commit()
+            logger.info("Images table created or already exists")
+        except Exception as e:
+            logger.error(f"Failed to create images table: {e}")
+            self.connection.rollback()
     
     def disconnect(self):
         """Close database connection"""

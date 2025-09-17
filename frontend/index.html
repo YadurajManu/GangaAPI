@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32-CAM Image Gallery</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #4a5568;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
+        }
+
+        .upload-section h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-form {
+            display: grid;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #4a5568;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            background: #667eea;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .file-input-wrapper:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .gallery-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .gallery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .gallery-header h2 {
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .refresh-btn {
+            background: #48bb78;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-btn:hover {
+            background: #38a169;
+            transform: translateY(-1px);
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .image-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .image-card:hover img {
+            transform: scale(1.05);
+        }
+
+        .image-info {
+            padding: 20px;
+        }
+
+        .image-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+
+        .image-meta {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .image-meta i {
+            width: 16px;
+            text-align: center;
+        }
+
+        .image-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .delete-btn {
+            background: #e53e3e;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .delete-btn:hover {
+            background: #c53030;
+            transform: translateY(-1px);
+        }
+
+        .view-btn {
+            background: #4299e1;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+        }
+
+        .view-btn:hover {
+            background: #3182ce;
+            transform: translateY(-1px);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .loading i {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #e53e3e;
+        }
+
+        .success {
+            background: #c6f6d5;
+            color: #2f855a;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #48bb78;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #cbd5e0;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #4a5568;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            opacity: 0.9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .modal-content img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 10px;
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            color: white;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #ccc;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .gallery {
+                grid-template-columns: 1fr;
+            }
+
+            .gallery-header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-camera"></i> ESP32-CAM Image Gallery</h1>
+            <p>Upload and manage images from your ESP32-CAM device</p>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <h2><i class="fas fa-upload"></i> Upload New Image</h2>
+            <form class="upload-form" id="uploadForm">
+                <div class="form-group">
+                    <label for="imageFile">Select Image:</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="imageFile" name="file" accept="image/*" class="file-input" required>
+                        <span><i class="fas fa-cloud-upload-alt"></i> Choose Image File</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="description">Description (optional):</label>
+                    <input type="text" id="description" name="description" placeholder="Enter image description">
+                </div>
+                <div class="form-group">
+                    <label for="location">Location (optional):</label>
+                    <input type="text" id="location" name="location" placeholder="Enter location">
+                </div>
+                <button type="submit" class="upload-btn" id="uploadBtn">
+                    <i class="fas fa-upload"></i> Upload Image
+                </button>
+            </form>
+            <div id="uploadMessage"></div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats" id="statsSection" style="display: none;">
+            <div class="stat-card">
+                <h3 id="totalImages">0</h3>
+                <p>Total Images</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="todayImages">0</h3>
+                <p>Today's Uploads</p>
+            </div>
+        </div>
+
+        <!-- Gallery Section -->
+        <div class="gallery-section">
+            <div class="gallery-header">
+                <h2><i class="fas fa-images"></i> Image Gallery</h2>
+                <button class="refresh-btn" onclick="loadImages()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div id="gallery" class="gallery">
+                <div class="loading">
+                    <i class="fas fa-spinner"></i>
+                    <div>Loading images...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal">
+        <span class="close">&times;</span>
+        <div class="modal-content">
+            <img id="modalImage" src="" alt="">
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'https://gangaapi.onrender.com'; // Replace with your actual Render URL
+        
+        // Global variables
+        let images = [];
+        
+        // Initialize on page load
+        window.onload = function() {
+            loadImages();
+            setupEventListeners();
+        };
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Upload form
+            document.getElementById('uploadForm').addEventListener('submit', handleUpload);
+            
+            // File input change
+            document.getElementById('imageFile').addEventListener('change', handleFileSelect);
+            
+            // Modal close
+            document.querySelector('.close').addEventListener('click', closeModal);
+            document.getElementById('imageModal').addEventListener('click', closeModal);
+        }
+
+        // Handle file selection
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const wrapper = event.target.parentElement;
+                wrapper.innerHTML = `<i class="fas fa-check"></i> ${file.name}`;
+                wrapper.style.background = '#48bb78';
+            }
+        }
+
+        // Handle image upload
+        async function handleUpload(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const fileInput = document.getElementById('imageFile');
+            const description = document.getElementById('description').value;
+            const location = document.getElementById('location').value;
+            const uploadBtn = document.getElementById('uploadBtn');
+            
+            if (!fileInput.files[0]) {
+                showMessage('Please select a file', 'error');
+                return;
+            }
+            
+            // Disable upload button
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            
+            formData.append('file', fileInput.files[0]);
+            formData.append('description', description);
+            formData.append('location', location);
+            
+            try {
+                const response = await fetch(`${API_BASE}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Image uploaded successfully!', 'success');
+                    document.getElementById('uploadForm').reset();
+                    resetFileInput();
+                    loadImages(); // Refresh gallery
+                } else {
+                    showMessage(`Upload failed: ${result.detail}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Upload error: ${error.message}`, 'error');
+            } finally {
+                // Re-enable upload button
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Image';
+            }
+        }
+
+        // Reset file input
+        function resetFileInput() {
+            const fileInput = document.getElementById('imageFile');
+            const wrapper = fileInput.parentElement;
+            wrapper.innerHTML = `
+                <input type="file" id="imageFile" name="file" accept="image/*" class="file-input" required>
+                <span><i class="fas fa-cloud-upload-alt"></i> Choose Image File</span>
+            `;
+            fileInput.addEventListener('change', handleFileSelect);
+        }
+
+        // Load all images
+        async function loadImages() {
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><div>Loading images...</div></div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/images`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    images = result.images;
+                    displayImages(images);
+                    updateStats(images);
+                } else {
+                    gallery.innerHTML = '<div class="error">Failed to load images</div>';
+                }
+            } catch (error) {
+                gallery.innerHTML = '<div class="error">Error loading images</div>';
+            }
+        }
+
+        // Display images in gallery
+        function displayImages(images) {
+            const gallery = document.getElementById('gallery');
+            
+            if (images.length === 0) {
+                gallery.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-images"></i>
+                        <h3>No images found</h3>
+                        <p>Upload some images to get started!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            gallery.innerHTML = images.map(image => `
+                <div class="image-card">
+                    <img src="${API_BASE}${image.path}" 
+                         alt="${image.filename}" 
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjI1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4='"
+                         onclick="openModal('${API_BASE}${image.path}')">
+                    <div class="image-info">
+                        <div class="image-title">${image.filename}</div>
+                        <div class="image-meta">
+                            <i class="fas fa-align-left"></i>
+                            ${image.description || 'No description'}
+                        </div>
+                        <div class="image-meta">
+                            <i class="fas fa-map-marker-alt"></i>
+                            ${image.location || 'No location'}
+                        </div>
+                        <div class="image-meta">
+                            <i class="fas fa-clock"></i>
+                            ${formatDate(image.uploaded_at)}
+                        </div>
+                        <div class="image-actions">
+                            <a href="${API_BASE}${image.path}" target="_blank" class="view-btn">
+                                <i class="fas fa-external-link-alt"></i> View
+                            </a>
+                            <button class="delete-btn" onclick="deleteImage(${image.id})">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update statistics
+        function updateStats(images) {
+            const statsSection = document.getElementById('statsSection');
+            const totalImages = document.getElementById('totalImages');
+            const todayImages = document.getElementById('todayImages');
+            
+            if (images.length > 0) {
+                statsSection.style.display = 'grid';
+                totalImages.textContent = images.length;
+                
+                const today = new Date().toDateString();
+                const todayCount = images.filter(img => 
+                    new Date(img.uploaded_at).toDateString() === today
+                ).length;
+                todayImages.textContent = todayCount;
+            } else {
+                statsSection.style.display = 'none';
+            }
+        }
+
+        // Delete image
+        async function deleteImage(imageId) {
+            if (!confirm('Are you sure you want to delete this image?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/images/${imageId}/delete`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Image deleted successfully!', 'success');
+                    loadImages(); // Refresh gallery
+                } else {
+                    showMessage(`Delete failed: ${result.detail}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Delete error: ${error.message}`, 'error');
+            }
+        }
+
+        // Open image modal
+        function openModal(imageSrc) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modalImg.src = imageSrc;
+            modal.style.display = 'block';
+        }
+
+        // Close image modal
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        // Show message
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('uploadMessage');
+            messageDiv.innerHTML = `<div class="${type}">${message}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
